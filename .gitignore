@@ -11,6 +11,7 @@
 *.dylib
 
 [Bb]uild
+[Dd]epends
 
 # Qt-es
 object_script.*.Release

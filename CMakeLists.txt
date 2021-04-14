@@ -13,13 +13,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+set(DEPENDS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/depends)
 
-set(OPENCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/depends/opencv")
+set(OPENCV_DIR "${DEPENDS_DIR}/opencv")
 set(OPENCV_INCLUDE_DIR "${OPENCV_DIR}/include")
 set(OPENCV_LIBRARY_DIR "${OPENCV_DIR}/lib")
-set(OPENCV_VERSION 451)
 set(OPENCV_BINARY_DIR "${OPENCV_DIR}/bin")
-set(OPENCV_LIBRARIES opencv_imgproc${OPENCV_VERSION})
+set(OPENCV_VERSION 451)
+
+list(APPEND OPENCV_LIBS
+     opencv_core
+     opencv_imgproc
+     opencv_imgcodecs
+     )
+
+foreach(lib ${OPENCV_LIBS})
+    set(OPENCV_LIBRARIES ${OPENCV_LIBRARIES} ${lib}${OPENCV_VERSION})
+endforeach()
 
 include_directories(${OPENCV_INCLUDE_DIR})
 include_directories(./include)
@@ -48,3 +58,12 @@ add_executable(orgb
 
 target_link_libraries(orgb PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(orgb PRIVATE ${OPENCV_LIBRARIES})
+
+foreach(lib ${OPENCV_LIBRARIES})
+    add_custom_command(TARGET orgb
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        "${OPENCV_BINARY_DIR}/${lib}.dll"
+        "${CMAKE_BINARY_DIR}/${lib}.dll"
+        )
+endforeach()
