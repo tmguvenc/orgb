@@ -2,5 +2,5 @@
 #include <opencv2/highgui.hpp>
 
 cv::Mat ImageLoader::readImage(const std::string& fileName) {
-    return cv::imread(fileName, cv::IMREAD_COLOR);
+    return cv::imread(fileName);
 }

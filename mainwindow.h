@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPixmap>
+#include <QImage>
 #include <opencv2/core/mat.hpp>
 
 QT_BEGIN_NAMESPACE
@@ -22,5 +24,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     cv::Mat original_img;
+    QPixmap pixmap;
+    QImage image;
 };
 #endif // MAINWINDOW_H
