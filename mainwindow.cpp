@@ -1,14 +1,16 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
-#include "image_loader.h"
 #include <QFileDialog>
 #include <QDir>
+#include "orgbconverter.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    orgbConverter = std::make_unique<ORGBConverter>();
 }
 
 MainWindow::~MainWindow()
@@ -18,26 +20,18 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_btn_load_img_clicked()
 {
-    auto current_dir = QDir::currentPath();
-
     const auto fileName = QFileDialog::getOpenFileName(this,
-        tr("Open Image"), current_dir.append("/../res"), tr("Image Files (*.png *.jpg *.bmp)"));
+        tr("Open Image"), QDir::currentPath().append("/../res"), tr("Image Files (*.png *.jpg *.bmp)"));
 
     if (!fileName.isEmpty()) {
-        original_img = ImageLoader::readImage(fileName.toStdString());
-        const auto data = original_img.ptr();
-        const auto size = original_img.step1() * original_img.rows;
-
-        image = QImage(original_img.cols, original_img.rows, QImage::Format::Format_Indexed8);
-        image.loadFromData(data, size);
-
-        pixmap = QPixmap(image.width(), image.height());
-//        if( pixmap.load(fileName) ) {
-        if( pixmap.loadFromData(data, size, "PNG") ) {
-
+        if( pixmap.load(fileName) ) {
             ui->img_5->setPixmap(pixmap);
             ui->img_5->update();
-        }
 
+            orgImage.create(pixmap.height(), pixmap.width(), CV_8UC3);
+            memcpy(orgImage.data, pixmap.toImage().constScanLine(0), orgImage.step1() * orgImage.rows);
+
+            orgbConverter->convert(orgImage);
+        }
     }
 }

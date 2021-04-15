@@ -5,10 +5,13 @@
 #include <QPixmap>
 #include <QImage>
 #include <opencv2/core/mat.hpp>
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
+
+class ORGBConverter;
 
 class MainWindow : public QMainWindow
 {
@@ -23,8 +26,10 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    cv::Mat original_img;
+    cv::Mat orgImage;
     QPixmap pixmap;
     QImage image;
+
+    std::unique_ptr<ORGBConverter> orgbConverter;
 };
 #endif // MAINWINDOW_H

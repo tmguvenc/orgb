@@ -38,12 +38,13 @@ link_directories(${OPENCV_LIBRARY_DIR})
 set(SOURCE_FILES
     src/main.cpp
     mainwindow.cpp
-    src/image_loader.cpp
+    src/orgbconverter.cpp
     )
 
 set(HEADER_FILES
     mainwindow.h
-    include/image_loader.h
+    include/orgbconverter.h
+    include/angletransformer.h
     )
 
 set(RESOURCE_FILES
