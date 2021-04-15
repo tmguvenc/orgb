@@ -10,7 +10,6 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    orgbConverter = std::make_unique<ORGBConverter>();
 }
 
 MainWindow::~MainWindow()
@@ -31,7 +30,7 @@ void MainWindow::on_btn_load_img_clicked()
             orgImage.create(pixmap.height(), pixmap.width(), CV_8UC3);
             memcpy(orgImage.data, pixmap.toImage().constScanLine(0), orgImage.step1() * orgImage.rows);
 
-            orgbConverter->convert(orgImage);
+            orgbConverter = std::make_unique<ORGBConverter>(orgImage);
         }
     }
 }
