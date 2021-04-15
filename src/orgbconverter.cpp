@@ -1,6 +1,7 @@
 #include "orgbconverter.h"
 #include "angletransformer.h"
 #include <tuple>
+#include <algorithm>
 
 static constexpr double TransformMat[3][3] = {
     { 0.2990,  0.5870,  0.1140 },
@@ -38,6 +39,31 @@ Rotated rotate(const LCC& lcc, const double angle) {
         cosAngle * lcc.cyb - sinAngle * lcc.crg,
         sinAngle * lcc.cyb + cosAngle * lcc.crg
     };
+
+
+
+    /*
+     *
+            double rotateMatrixCos = cos(angle);
+            double rotateMatrixSin = sin(angle);
+            LCbyCgrScaledVector[1] = rotateMatrixCos * newCyb + rotateMatrixSin * newCrg;
+            LCbyCgrScaledVector[2] = rotateMatrixCos * newCrg - rotateMatrixSin * newCyb;
+
+     */
+}
+
+Rotated inverseRotate(const LCC& lcc, const double angle) {
+    //          Inverse Rotation Matrix
+    //
+    //          R = |  cos(x) sin(x) |
+    //              | -sin(x) cos(x) |
+    //
+    const auto cosAngle = cos(angle);
+    const auto sinAngle = sin(angle);
+    return {
+         cosAngle * lcc.cyb + sinAngle * lcc.crg,
+        -sinAngle * lcc.cyb + cosAngle * lcc.crg
+    };
 }
 
 LCC lccConvert(const cv::Vec3d& scaledPixel) {
@@ -58,7 +84,8 @@ cv::Mat ORGBConverter::convert(const cv::Mat& srcImage) {
         throw std::runtime_error("Invalid Image Type");
     }
 
-    // for cache efficiency, we normalize the whole image before-hand.
+    // normalize the whole image before-hand
+    // to utilize opencv AVX optimizations
     cv::Mat normalizedImage;
     srcImage.convertTo(normalizedImage, CV_64F, 1.0 / 255.0);
 
@@ -89,3 +116,57 @@ cv::Mat ORGBConverter::convert(const cv::Mat& srcImage) {
 
     return dstImage;
 }
+
+cv::Mat ORGBConverter::getOrgbImage(const LCC& scaleFactor, const LCC& shiftFactor) const {
+    cv::Mat dstImage(orgbImage.rows, orgbImage.cols, CV_8UC3);
+
+    for(auto row = 0; row < orgbImage.rows; ++row) {
+        for(auto col = 0; col < orgbImage.cols; ++col) {
+
+            const auto pixel = orgbImage.at<cv::Vec3d>(row, col);
+
+            const auto newLuma = scaleFactor.luma * pixel[0] + shiftFactor.luma;
+            const auto newCyb = scaleFactor.cyb * pixel[1] + shiftFactor.cyb;
+            const auto newCrg = scaleFactor.crg * pixel[2] + shiftFactor.crg;
+
+            const auto theta0 = atan2(newCrg, newCyb);
+            const auto theta = (theta0 > 0) ? Orgb2LccAngle(theta0) : -Orgb2LccAngle(-theta0);
+            const auto angle = theta0 - theta;
+            const auto [cyb, crg] = inverseRotate({newLuma, newCyb, newCrg}, angle);
+
+            cv::Vec3b intensity;
+            for (int r = 0; r < 3; r++) {
+                intensity[2 - r] = static_cast<uint8_t>(std::clamp<double>((
+                            InvTransformMat[r][0] * newLuma +
+                            InvTransformMat[r][1] * cyb +
+                            InvTransformMat[r][2] * crg) * 255, 0.0, 255.0));
+            }
+            dstImage.at<cv::Vec3b>(row, col) = intensity;
+        }
+    }
+
+    return dstImage;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
