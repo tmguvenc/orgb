@@ -21,7 +21,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_btn_load_img_clicked()
 {
     const auto fileName = QFileDialog::getOpenFileName(this,
-        tr("Open Image"), QDir::currentPath().append("/../res"), tr("Image Files (*.png *.jpg *.bmp)"));
+        tr("Open Image"), QDir::currentPath().append("/res"), tr("Image Files (*.png *.jpg *.bmp)"));
 
     if (!fileName.isEmpty()) {
         if( pixmap.load(fileName) ) {

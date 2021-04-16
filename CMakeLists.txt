@@ -53,7 +53,7 @@ set(RESOURCE_FILES
     mainwindow.ui
     )
 
-add_executable(orgb
+add_executable(orgb WIN32
     ${SOURCE_FILES}
     ${HEADER_FILES}
     ${RESOURCE_FILES}
