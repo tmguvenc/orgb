@@ -36,6 +36,10 @@ void MainWindow::on_btn_load_img_clicked()
             image = QImage(orgbImage.data, pixmap.width(), pixmap.height(), QImage::Format::Format_RGB888);
             ui->img_1->setPixmap(QPixmap::fromImage(image));
             ui->img_1->update();
+
+            ui->vs_luma->setEnabled(true);
+            ui->vs_yb->setEnabled(true);
+            ui->vs_rg->setEnabled(true);
         }
     }
 }

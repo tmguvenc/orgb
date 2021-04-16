@@ -23,7 +23,6 @@ set(OPENCV_VERSION 451)
 
 list(APPEND OPENCV_LIBS
      opencv_core
-     opencv_imgproc
      opencv_imgcodecs
      opencv_highgui
      )
