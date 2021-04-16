@@ -4,14 +4,12 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 
-struct LCC;
-
 class ORGBConverter
 {
 public:
     ORGBConverter(const cv::Mat& srcImage);
 
-    cv::Mat getOrgbImage(const LCC& scaleFactor, const LCC& shiftFactor) const;
+    cv::Mat getOrgbImage(const cv::Vec3d& scaleFactor, const cv::Vec3d& shiftFactor) const;
 
 private:
     cv::Mat convert(const cv::Mat& srcImage);

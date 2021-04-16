@@ -25,6 +25,7 @@ list(APPEND OPENCV_LIBS
      opencv_core
      opencv_imgproc
      opencv_imgcodecs
+     opencv_highgui
      )
 
 foreach(lib ${OPENCV_LIBS})
@@ -39,12 +40,14 @@ set(SOURCE_FILES
     src/main.cpp
     mainwindow.cpp
     src/orgbconverter.cpp
+    src/lcc.cpp
     )
 
 set(HEADER_FILES
     mainwindow.h
     include/orgbconverter.h
     include/angletransformer.h
+    include/lcc.h
     )
 
 set(RESOURCE_FILES

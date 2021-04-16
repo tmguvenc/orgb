@@ -1,5 +1,6 @@
 #include "orgbconverter.h"
 #include "angletransformer.h"
+#include "lcc.h"
 #include <tuple>
 #include <algorithm>
 
@@ -19,60 +20,13 @@ ORGBConverter::ORGBConverter(const cv::Mat& srcImage) {
     orgbImage = convert(srcImage);
 }
 
-struct LCC {
-    double luma{};
-    double cyb{};
-    double crg{};
-};
-
-using Rotated = std::pair<double, double>;
-
-Rotated rotate(const LCC& lcc, const double angle) {
-    //          Rotation Matrix
-    //
-    //          R = | cos(x) -sin(x) |
-    //              | sin(x)  cos(x) |
-    //
-    const auto cosAngle = cos(angle);
-    const auto sinAngle = sin(angle);
-    return {
-        cosAngle * lcc.cyb - sinAngle * lcc.crg,
-        sinAngle * lcc.cyb + cosAngle * lcc.crg
-    };
-
-
-
-    /*
-     *
-            double rotateMatrixCos = cos(angle);
-            double rotateMatrixSin = sin(angle);
-            LCbyCgrScaledVector[1] = rotateMatrixCos * newCyb + rotateMatrixSin * newCrg;
-            LCbyCgrScaledVector[2] = rotateMatrixCos * newCrg - rotateMatrixSin * newCyb;
-
-     */
-}
-
-Rotated inverseRotate(const LCC& lcc, const double angle) {
-    //          Inverse Rotation Matrix
-    //
-    //          R = |  cos(x) sin(x) |
-    //              | -sin(x) cos(x) |
-    //
-    const auto cosAngle = cos(angle);
-    const auto sinAngle = sin(angle);
-    return {
-         cosAngle * lcc.cyb + sinAngle * lcc.crg,
-        -sinAngle * lcc.cyb + cosAngle * lcc.crg
-    };
-}
-
-LCC lccConvert(const cv::Vec3d& scaledPixel) {
+LCC createLCC(const cv::Vec3d& scaledPixel) {
     double lcc[3];
 
-    for (int r = 0; r < 3; r++) {
-        lcc[r] = 0;
-        for (int c = 0; c < 3; c++) {
-            lcc[r] += TransformMat[r][c] * scaledPixel[c];
+    for (auto row = 0; row < 3; ++row) {
+        lcc[row] = 0;
+        for (auto col = 0; col < 3; ++col) {
+            lcc[row] += TransformMat[row][col] * scaledPixel[col];
         }
     }
 
@@ -94,52 +48,49 @@ cv::Mat ORGBConverter::convert(const cv::Mat& srcImage) {
     for(auto row = 0; row < srcImage.rows; ++row) {
         for(auto col = 0; col < srcImage.cols; ++col) {
 
-            //const cv::Mat lcc = transformMatrix.mul(normalizedImage.at<cv::Vec3d>(row, col));
-            const auto lcc = lccConvert(normalizedImage.at<cv::Vec3d>(row, col));
-            auto& orgbPixel = dstImage.at<cv::Vec3d>(row, col);
-
-            // luma
-            orgbPixel[0] = lcc.luma;
+            auto lcc = createLCC(normalizedImage.at<cv::Vec3d>(row, col));
 
             // q = atan2(C′2, C′1).
-            const auto theta = std::atan2(lcc.crg, lcc.cyb);
-            const auto theta0 = (theta > 0.0) ? lcc2OrgbAngle(theta) : -Orgb2LccAngle(-theta);
+            const auto theta = std::atan2(lcc.getCrg(), lcc.getCyb());
+            const auto theta0 = (theta > 0.0) ? lcc2OrgbAngle(theta) : -lcc2OrgbAngle(-theta);
 
 //          To compute the point (C′yb, C′rg) in oRGB we simply rotate the (C′1, C′2) point:
 //
 //           | C'yb |                   | C'1 |
 //           | C'rg | = R(theta0-theta) | C'2 |
 //
-            std::tie(orgbPixel[1], orgbPixel[2]) = rotate(lcc, theta0 - theta);
+            lcc.rotate(theta0 - theta);
+
+            dstImage.at<cv::Vec3d>(row, col) = lcc.toVec();
         }
     }
 
     return dstImage;
 }
 
-cv::Mat ORGBConverter::getOrgbImage(const LCC& scaleFactor, const LCC& shiftFactor) const {
+cv::Mat ORGBConverter::getOrgbImage(const cv::Vec3d& scaleFactor, const cv::Vec3d& shiftFactor) const {
     cv::Mat dstImage(orgbImage.rows, orgbImage.cols, CV_8UC3);
 
     for(auto row = 0; row < orgbImage.rows; ++row) {
         for(auto col = 0; col < orgbImage.cols; ++col) {
 
             const auto pixel = orgbImage.at<cv::Vec3d>(row, col);
+            LCC lcc(pixel[0], pixel[1], pixel[2]);
 
-            const auto newLuma = scaleFactor.luma * pixel[0] + shiftFactor.luma;
-            const auto newCyb = scaleFactor.cyb * pixel[1] + shiftFactor.cyb;
-            const auto newCrg = scaleFactor.crg * pixel[2] + shiftFactor.crg;
+            lcc.scale(scaleFactor);
+            lcc.shift(shiftFactor);
 
-            const auto theta0 = atan2(newCrg, newCyb);
+            const auto theta0 = std::atan2(lcc.getCrg(), lcc.getCyb());
             const auto theta = (theta0 > 0) ? Orgb2LccAngle(theta0) : -Orgb2LccAngle(-theta0);
-            const auto angle = theta0 - theta;
-            const auto [cyb, crg] = inverseRotate({newLuma, newCyb, newCrg}, angle);
+
+            lcc.inverseRotate(theta0 - theta);
 
             cv::Vec3b intensity;
             for (int r = 0; r < 3; r++) {
-                intensity[2 - r] = static_cast<uint8_t>(std::clamp<double>((
-                            InvTransformMat[r][0] * newLuma +
-                            InvTransformMat[r][1] * cyb +
-                            InvTransformMat[r][2] * crg) * 255, 0.0, 255.0));
+                intensity[2-r] = static_cast<cv::Vec3b::value_type>(std::clamp<double>((
+                            InvTransformMat[r][0] * lcc.getLuma() +
+                            InvTransformMat[r][1] * lcc.getCyb() +
+                            InvTransformMat[r][2] * lcc.getCrg()) * 255, 0.0, 255.0));
             }
             dstImage.at<cv::Vec3b>(row, col) = intensity;
         }
