@@ -54,11 +54,11 @@ cv::Mat ORGBConverter::convert(const cv::Mat& srcImage) {
             const auto theta = std::atan2(lcc.getCrg(), lcc.getCyb());
             const auto theta0 = (theta > 0.0) ? lcc2OrgbAngle(theta) : -lcc2OrgbAngle(-theta);
 
-//          To compute the point (C′yb, C′rg) in oRGB we simply rotate the (C′1, C′2) point:
-//
-//           | C'yb |                   | C'1 |
-//           | C'rg | = R(theta0-theta) | C'2 |
-//
+            // To compute the point (C′yb, C′rg) in oRGB we simply rotate the (C′1, C′2) point:
+            //
+            //  | C'yb |                   | C'1 |
+            //  | C'rg | = R(theta0-theta) | C'2 |
+            //
             lcc.rotate(theta0 - theta);
 
             dstImage.at<cv::Vec3d>(row, col) = lcc.toVec();
